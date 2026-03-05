@@ -7,31 +7,31 @@ const GCC = {
   maxLon: 60
 };
 
+const API_KEY = "ec2e34699b7718842f5770c381ff426f";
+
 async function getFlights() {
   try {
 
     const res = await axios.get(
-      "https://opensky-network.org/api/states/all",
-      { timeout: 5000 }
+      `http://api.aviationstack.com/v1/flights?access_key=${API_KEY}`
     );
 
-    const states = res.data.states || [];
-
-    const flights = states
-      .filter(s => {
-        const lat = s[6];
-        const lon = s[5];
-
-        return lat && lon &&
-          lat > GCC.minLat && lat < GCC.maxLat &&
-          lon > GCC.minLon && lon < GCC.maxLon;
-      })
-      .map(s => ({
-        callsign: s[1]?.trim() || "FLIGHT",
-        lat: s[6],
-        lon: s[5],
-        altitude: s[7] || 10000,
-        heading: s[10] || 0
+    const flights = res.data.data
+      .filter(f =>
+        f.live &&
+        f.live.latitude &&
+        f.live.longitude &&
+        f.live.latitude > GCC.minLat &&
+        f.live.latitude < GCC.maxLat &&
+        f.live.longitude > GCC.minLon &&
+        f.live.longitude < GCC.maxLon
+      )
+      .map(f => ({
+        callsign: f.flight.iata || f.flight.icao || "FLIGHT",
+        lat: f.live.latitude,
+        lon: f.live.longitude,
+        altitude: f.live.altitude * 1000,
+        heading: f.live.direction || 0
       }));
 
     console.log("Flights over GCC:", flights.length);
@@ -39,7 +39,7 @@ async function getFlights() {
     return flights;
 
   } catch (err) {
-    console.log("Flights API blocked");
+    console.log("Flights API failed");
     return [];
   }
 }
