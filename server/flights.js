@@ -1,5 +1,8 @@
 const axios = require("axios");
+
 const API_KEY = process.env.AVIATIONSTACK_KEY;
+const BASE_URL = "http://api.aviationstack.com/v1/flights";
+
 const GCC = {
   minLat: 16,
   maxLat: 33,
@@ -10,61 +13,53 @@ const GCC = {
 async function getFlights() {
   try {
 
-    // OpenSky bounding box query
-    const url = `https://opensky-network.org/api/states/all?lamin=${GCC.minLat}&lomin=${GCC.minLon}&lamax=${GCC.maxLat}&lomax=${GCC.maxLon}`;
-
-    const res = await axios.get(url, {
-      timeout: 30000
-    });
-
-    if (!res.data || !res.data.states) return [];
-
-    const flights = res.data.states;
-
-    const result = [];
-
-    for (const f of flights) {
-
-      const [
-        icao,
-        callsign,
-        originCountry,
-        timePosition,
-        lastContact,
-        lon,
-        lat,
-        baroAlt,
-        onGround,
-        velocity,
-        heading,
-        verticalRate,
-        geoAlt
-      ] = f;
-
-      if (!lat || !lon) continue;
-      if (onGround) continue;
-
-      result.push({
-        icao,
-        callsign: (callsign || "").trim() || icao,
-        lat,
-        lon,
-        altitude: (geoAlt || baroAlt || 0), // already meters
-        heading: heading || 0,
-        velocity: velocity || 0
-      });
+    if (!API_KEY) {
+      console.error("AVIATIONSTACK_KEY missing");
+      return [];
     }
 
-    console.log("Flights over GCC:", result.length);
+    const res = await axios.get(BASE_URL, {
+      params: {
+        access_key: API_KEY,
+        limit: 100
+      },
+      timeout: 15000
+    });
 
-    return result;
+    if (!res.data || !Array.isArray(res.data.data)) {
+      console.log("No flight data returned");
+      return [];
+    }
+
+    const flights = res.data.data
+      .filter(f => {
+        const lat = f.live?.latitude;
+        const lon = f.live?.longitude;
+
+        return typeof lat === "number" &&
+               typeof lon === "number" &&
+               lat >= GCC.minLat &&
+               lat <= GCC.maxLat &&
+               lon >= GCC.minLon &&
+               lon <= GCC.maxLon;
+      })
+      .map(f => ({
+        callsign: f.flight?.iata || f.flight?.icao || "N/A",
+        icao: f.aircraft?.icao24 || "",
+        lat: f.live.latitude,
+        lon: f.live.longitude,
+        altitude: f.live.altitude * 0.3048 || 10000, // feet → meters
+        heading: f.live.direction || 0
+      }));
+
+    console.log("Flights over GCC:", flights.length);
+
+    return flights;
 
   } catch (err) {
-    console.error("Flight API error:", err.message);
-    return []; // 🚨 NEVER throw
+    console.error("AviationStack error:", err.message);
+    return [];
   }
 }
 
 module.exports = { getFlights };
-
-
