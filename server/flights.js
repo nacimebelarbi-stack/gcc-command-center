@@ -1,7 +1,5 @@
-const axios = require("axios");
-const satellite = require("satellite.js");
 
-let tleData = [];
+const axios = require("axios");
 
 const GCC = {
   minLat: 16,
@@ -10,94 +8,40 @@ const GCC = {
   maxLon: 60
 };
 
-async function loadTLE() {
+async function getFlights() {
   try {
     const res = await axios.get(
-      "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle"
+      "https://opensky-network.org/api/states/all"
     );
 
-    const lines = res.data
-      .split("\n")
-      .map(l => l.trim())
-      .filter(l => l.length > 0);
+    const states = res.data.states || [];
 
-    tleData = [];
+    const flights = states
+      .filter(s => {
+        const lat = s[6];
+        const lon = s[5];
 
-    for (let i = 0; i < lines.length - 2; i += 3) {
-      const name = lines[i];
-      const line1 = lines[i + 1];
-      const line2 = lines[i + 2];
+        return lat && lon &&
+          lat > GCC.minLat && lat < GCC.maxLat &&
+          lon > GCC.minLon && lon < GCC.maxLon;
+      })
+      .map(s => ({
+        callsign: s[1]?.trim() || "FLIGHT",
+        icao: s[0],
+        lat: s[6],
+        lon: s[5],
+        altitude: s[7] || 10000,
+        heading: s[10] || 0
+      }));
 
-      if (!line1 || !line2) continue;
-      if (!line1.startsWith("1 ")) continue;
-      if (!line2.startsWith("2 ")) continue;
+    console.log("Flights over GCC:", flights.length);
 
-      tleData.push({ name, line1, line2 });
-    }
-
-    console.log("Loaded TLE count:", tleData.length);
+    return flights;
 
   } catch (err) {
-    console.error("TLE load failed:", err.message);
+    console.error("OpenSky error:", err.message);
+    return [];
   }
 }
 
-loadTLE();
-setInterval(loadTLE, 3 * 60 * 60 * 1000);
-
-function getSatellites() {
-
-  if (!tleData.length) return [];
-
-  const now = new Date();
-  const gmst = satellite.gstime(now);
-
-  const result = [];
-
-  for (const sat of tleData) {
-
-    try {
-      const satrec = satellite.twoline2satrec(
-        sat.line1,
-        sat.line2
-      );
-
-      const posVel = satellite.propagate(satrec, now);
-      if (!posVel || !posVel.position) continue;
-
-      const geo = satellite.eciToGeodetic(
-        posVel.position,
-        gmst
-      );
-
-      const lat = satellite.degreesLat(geo.latitude);
-      const lon = satellite.degreesLong(geo.longitude);
-
-      // GCC filter
-      if (
-        lat < GCC.minLat || lat > GCC.maxLat ||
-        lon < GCC.minLon || lon > GCC.maxLon
-      ) continue;
-
-      // REMOVE STARLINK ONLY
-      if (sat.name.includes("STARLINK")) continue;
-
-      result.push({
-        name: sat.name,
-        lat,
-        lon,
-        altitude: geo.height * 1000
-      });
-
-    } catch {
-      continue;
-    }
-  }
-
-  console.log("Satellites over GCC:", result.length);
-
-  return result;
-}
-
-module.exports = { getSatellites };
-
+module.exports = { getFlights };
