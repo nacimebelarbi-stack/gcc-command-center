@@ -10,7 +10,13 @@ app.use(cors());
 app.use(express.static("public"));
 
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  },
+  transports: ["websocket", "polling"]
+});
 
 io.on("connection", (socket) => {
   console.log("Client connected");
@@ -29,4 +35,5 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () =>
   console.log(`🚀 GCC Command Center running on port ${PORT}`)
+
 );
