@@ -1,41 +1,53 @@
-// === CESIUM TOKEN ===
+// ==============================
+// CESIUM TOKEN
+// ==============================
 Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0M2ZlMDNlMS05YmQ3LTQ2MWUtYTA2NC1iZWY5N2IwNTc4NDQiLCJpZCI6Mzk4NDk4LCJpYXQiOjE3NzI3MDAxMzB9.dqusYhifXL6vnbTMlGlOI1nP7ycmZzP4fVEw8Ixa_Dc";
 
-// === SOCKET CONNECTION ===
+// ==============================
+// SOCKET CONNECTION
+// ==============================
 const socket = io({
   transports: ["websocket"]
 });
 
-// === CREATE VIEWER (FORCE TERRAIN + IMAGERY) ===
+// ==============================
+// CREATE CESIUM VIEWER (DEFAULT SAFE MODE)
+// ==============================
 const viewer = new Cesium.Viewer("cesiumContainer", {
-  terrainProvider: Cesium.createWorldTerrain(),
-  imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
   timeline: false,
   animation: false,
   baseLayerPicker: false
 });
 
-// === FORCE CAMERA TO GCC ===
+// ==============================
+// FORCE CAMERA TO GCC REGION
+// ==============================
 viewer.camera.setView({
   destination: Cesium.Cartesian3.fromDegrees(
-    50,   // Longitude (GCC center)
+    50,   // Longitude
     25,   // Latitude
     20000000 // Height
   )
 });
 
-// === ENTITY STORAGE ===
+// ==============================
+// ENTITY STORAGE
+// ==============================
 const satEntities = {};
 const flightEntities = {};
 
-// =============================
+// ==============================
 // SATELLITES
-// =============================
+// ==============================
 socket.on("satellites", sats => {
 
-  // Clear previous satellites
-  Object.values(satEntities).forEach(e => viewer.entities.remove(e));
-  Object.keys(satEntities).forEach(k => delete satEntities[k]);
+  // Remove old satellites
+  Object.values(satEntities).forEach(entity =>
+    viewer.entities.remove(entity)
+  );
+  Object.keys(satEntities).forEach(key =>
+    delete satEntities[key]
+  );
 
   sats.forEach(s => {
 
@@ -60,14 +72,18 @@ socket.on("satellites", sats => {
   });
 });
 
-// =============================
+// ==============================
 // FLIGHTS
-// =============================
+// ==============================
 socket.on("flights", flights => {
 
-  // Clear previous flights
-  Object.values(flightEntities).forEach(e => viewer.entities.remove(e));
-  Object.keys(flightEntities).forEach(k => delete flightEntities[k]);
+  // Remove old flights
+  Object.values(flightEntities).forEach(entity =>
+    viewer.entities.remove(entity)
+  );
+  Object.keys(flightEntities).forEach(key =>
+    delete flightEntities[key]
+  );
 
   flights.forEach(f => {
 
@@ -88,7 +104,9 @@ socket.on("flights", flights => {
       }
     });
 
-    flightEntities[f.callsign] = entity;
+    flightEntities[f.callsign || Math.random()] = entity;
   });
 });
+});
+
 
