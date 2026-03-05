@@ -32,7 +32,7 @@ async function loadTLE() {
       if (!line1.startsWith("1 ")) continue;
       if (!line2.startsWith("2 ")) continue;
 
-      tleData.push({ name, line1, line2 });
+      newtleData.push({ name, line1, line2 });
     }
 
     console.log("Loaded TLE count:", tleData.length);
@@ -100,4 +100,5 @@ function getSatellites() {
 }
 
 module.exports = { getSatellites };
+
 
