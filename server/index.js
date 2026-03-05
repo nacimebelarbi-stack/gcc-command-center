@@ -9,7 +9,6 @@ const { getSatellites } = require("./satellites");
 const app = express();
 app.use(cors());
 
-// Serve frontend
 const publicPath = path.join(__dirname, "..", "public");
 app.use(express.static(publicPath));
 
@@ -28,10 +27,8 @@ io.on("connection", (socket) => {
 
   console.log("Client connected");
 
-  // Emit satellites only
   setInterval(() => {
     const sats = getSatellites();
-    console.log("Emitting satellites:", sats.length);
     socket.emit("satellites", sats);
   }, 5000);
 
