@@ -3,34 +3,49 @@ const axios = require("axios");
 const API_KEY = process.env.AVIATIONSTACK_KEY;
 const BASE_URL = "http://api.aviationstack.com/v1/flights";
 
+// Cache storage
 let aircraft = [];
+let lastFetchTime = 0;
+
+// Minimum delay between AviationStack calls (in ms)
+const FETCH_INTERVAL = 60000; // 60 seconds (increase if on free plan)
 
 /**
  * Fetch real live aircraft positions from AviationStack
  */
 async function fetchLiveFlights() {
+  const now = Date.now();
+
+  // If called too soon, return cached data
+  if (now - lastFetchTime < FETCH_INTERVAL) {
+    console.log("⏳ Serving cached flights");
+    return aircraft;
+  }
+
   try {
     if (!API_KEY) {
       console.error("❌ AVIATIONSTACK_KEY missing");
-      return [];
+      return aircraft;
     }
+
+    console.log("🌍 Fetching fresh flights from AviationStack...");
 
     const res = await axios.get(BASE_URL, {
       params: {
         access_key: API_KEY,
-        flight_status: "active",   // Only active flights
-        limit: 100                 // Increase if your plan allows
+        flight_status: "active",
+        limit: 100
       },
       timeout: 15000
     });
 
     if (!res.data || !Array.isArray(res.data.data)) {
       console.log("⚠️ No valid AviationStack data");
-      return [];
+      return aircraft;
     }
 
-    const liveFlights = res.data.data
-      .filter(f => 
+    aircraft = res.data.data
+      .filter(f =>
         f.live &&
         typeof f.live.latitude === "number" &&
         typeof f.live.longitude === "number"
@@ -49,13 +64,15 @@ async function fetchLiveFlights() {
         last_updated: f.live.updated || null
       }));
 
-    console.log(`✈️ Live aircraft received: ${liveFlights.length}`);
+    lastFetchTime = now;
 
-    return liveFlights;
+    console.log(`✈️ Live aircraft updated: ${aircraft.length}`);
+
+    return aircraft;
 
   } catch (err) {
     console.error("❌ AviationStack fetch error:", err.message);
-    return [];
+    return aircraft; // return cached data instead of empty array
   }
 }
 
@@ -63,8 +80,7 @@ async function fetchLiveFlights() {
  * Public function used by your app
  */
 async function getFlights() {
-  aircraft = await fetchLiveFlights();
-  return aircraft;
+  return await fetchLiveFlights();
 }
 
 module.exports = { getFlights };
