@@ -1,4 +1,4 @@
-
+const { getFlights } = require("./flights");
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -28,18 +28,23 @@ io.on("connection", (socket) => {
   console.log("Client connected");
 
   setInterval(async () => {
+  try {
 
     const sats = getSatellites();
-    socket.emit("satellites", sats);
+    io.emit("satellites", sats);
 
     const flights = await getFlights();
-    socket.emit("flights", flights);
+    io.emit("flights", flights);
 
-  }, 10000);
+  } catch (err) {
+    console.error("Interval error:", err);
+  }
+}, 10000);
 });
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
   console.log(`🚀 GCC Command Center running on port ${PORT}`);
 });
+
 
