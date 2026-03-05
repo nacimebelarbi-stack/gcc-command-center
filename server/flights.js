@@ -1,5 +1,5 @@
 const axios = require("axios");
-
+const API_KEY = process.env.AVIATIONSTACK_KEY;
 const GCC = {
   minLat: 16,
   maxLat: 33,
@@ -66,4 +66,5 @@ async function getFlights() {
 }
 
 module.exports = { getFlights };
+
 
