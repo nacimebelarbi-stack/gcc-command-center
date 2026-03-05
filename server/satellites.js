@@ -3,7 +3,6 @@ const satellite = require("satellite.js");
 
 let tleData = [];
 
-// GCC bounding box
 const GCC = {
   minLat: 16,
   maxLat: 33,
@@ -11,9 +10,6 @@ const GCC = {
   maxLon: 60
 };
 
-/*
-  LOAD ALL ACTIVE TLEs SAFELY
-*/
 async function loadTLE() {
   try {
     const res = await axios.get(
@@ -46,21 +42,12 @@ async function loadTLE() {
   }
 }
 
-// Load immediately
 loadTLE();
-
-// Refresh every 3 hours
 setInterval(loadTLE, 3 * 60 * 60 * 1000);
 
-/*
-  PROPAGATE + FILTER
-*/
 function getSatellites() {
 
-  if (!tleData.length) {
-    console.log("TLE not loaded yet");
-    return [];
-  }
+  if (!tleData.length) return [];
 
   const now = new Date();
   const gmst = satellite.gstime(now);
@@ -86,16 +73,6 @@ function getSatellites() {
       const lat = satellite.degreesLat(geo.latitude);
       const lon = satellite.degreesLong(geo.longitude);
 
-      // Remove Starlink
-      if (sat.name.includes("STARLINK")) continue;
-
-      // Keep only debris & rocket bodies
-      if (
-        !sat.name.includes("DEB") &&
-        !sat.name.includes("R/B")
-      ) continue;
-
-      // GCC filter
       if (
         lat < GCC.minLat || lat > GCC.maxLat ||
         lon < GCC.minLon || lon > GCC.maxLon
