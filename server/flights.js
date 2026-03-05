@@ -10,56 +10,75 @@ const GCC = {
   maxLon: 60
 };
 
-async function getFlights() {
+function randomBetween(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+let aircraft = [];
+
+async function initializeFlights() {
   try {
 
     if (!API_KEY) {
       console.error("AVIATIONSTACK_KEY missing");
-      return [];
+      return;
     }
 
     const res = await axios.get(BASE_URL, {
       params: {
         access_key: API_KEY,
-        limit: 100
+        limit: 20
       },
       timeout: 15000
     });
 
     if (!res.data || !Array.isArray(res.data.data)) {
-      console.log("No flight data returned");
-      return [];
+      console.log("No AviationStack data");
+      return;
     }
 
-    const flights = res.data.data
-      .filter(f => {
-        const lat = f.live?.latitude;
-        const lon = f.live?.longitude;
+    aircraft = res.data.data.map((f, i) => ({
+      icao: f.flight?.icao || "SIM" + i,
+      callsign: f.flight?.iata || f.flight?.icao || "FLIGHT" + i,
+      airline: f.airline?.name || "Unknown Airline",
+      route: `${f.departure?.iata || "XXX"} → ${f.arrival?.iata || "YYY"}`,
+      lat: randomBetween(GCC.minLat, GCC.maxLat),
+      lon: randomBetween(GCC.minLon, GCC.maxLon),
+      altitude: randomBetween(9000, 12000),
+      heading: randomBetween(0, 360),
+      speed: randomBetween(0.05, 0.12)
+    }));
 
-        return typeof lat === "number" &&
-               typeof lon === "number" &&
-               lat >= GCC.minLat &&
-               lat <= GCC.maxLat &&
-               lon >= GCC.minLon &&
-               lon <= GCC.maxLon;
-      })
-      .map(f => ({
-        callsign: f.flight?.iata || f.flight?.icao || "N/A",
-        icao: f.aircraft?.icao24 || "",
-        lat: f.live.latitude,
-        lon: f.live.longitude,
-        altitude: f.live.altitude * 0.3048 || 10000, // feet → meters
-        heading: f.live.direction || 0
-      }));
-
-    console.log("Flights over GCC:", flights.length);
-
-    return flights;
+    console.log("Initialized aircraft:", aircraft.length);
 
   } catch (err) {
-    console.error("AviationStack error:", err.message);
-    return [];
+    console.error("Initialization error:", err.message);
   }
+}
+
+function moveAircraft() {
+  aircraft = aircraft.map(f => {
+    const rad = (f.heading * Math.PI) / 180;
+
+    return {
+      ...f,
+      lat: f.lat + Math.cos(rad) * f.speed,
+      lon: f.lon + Math.sin(rad) * f.speed
+    };
+  });
+}
+
+async function getFlights() {
+
+  if (aircraft.length === 0) {
+    await initializeFlights();
+  }
+
+  moveAircraft();
+
+  console.log("Flights over GCC:", aircraft.length);
+
+  return aircraft;
 }
 
 module.exports = { getFlights };
