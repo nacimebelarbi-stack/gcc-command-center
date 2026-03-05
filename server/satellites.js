@@ -1,7 +1,7 @@
 const axios = require("axios");
 const satellite = require("satellite.js");
 
-let const newTleData = [];
+let tleData = [];
 
 const GCC = {
   minLat: 16,
@@ -21,7 +21,7 @@ async function loadTLE() {
       .map(l => l.trim())
       .filter(l => l.length > 0);
 
-    const newTleData = [];
+    tleData = [];
 
     for (let i = 0; i < lines.length - 2; i += 3) {
       const name = lines[i];
@@ -32,7 +32,7 @@ async function loadTLE() {
       if (!line1.startsWith("1 ")) continue;
       if (!line2.startsWith("2 ")) continue;
 
-      newtleData.push({ name, line1, line2 });
+      tleData.push({ name, line1, line2 });
     }
 
     console.log("Loaded TLE count:", tleData.length);
@@ -100,5 +100,4 @@ function getSatellites() {
 }
 
 module.exports = { getSatellites };
-
 
