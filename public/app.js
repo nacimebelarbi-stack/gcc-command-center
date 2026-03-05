@@ -1,7 +1,6 @@
 
 Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0M2ZlMDNlMS05YmQ3LTQ2MWUtYTA2NC1iZWY5N2IwNTc4NDQiLCJpZCI6Mzk4NDk4LCJpYXQiOjE3NzI3MDAxMzB9.dqusYhifXL6vnbTMlGlOI1nP7ycmZzP4fVEw8Ixa_Dc";
 
-
 const socket = io({ transports: ["websocket"] });
 
 const viewer = new Cesium.Viewer("cesiumContainer", {
@@ -21,66 +20,9 @@ const satEntities = {};
 const flightEntities = {};
 const flightTrails = {};
 
-// =============================
-// RADAR SWEEP EFFECT
-// =============================
-// =============================
-// RADAR SWEEP (SAFE VERSION)
-// =============================
-
-const radarCenter = Cesium.Cartesian3.fromDegrees(50, 25);
-
-let sweepAngle = 0;
-
-viewer.entities.add({
-  position: radarCenter,
-  ellipse: {
-    semiMinorAxis: 1500000.0,
-    semiMajorAxis: 1500000.0,
-    material: new Cesium.ColorMaterialProperty(
-      Cesium.Color.LIME.withAlpha(0.05)
-    )
-  }
-});
-
-// Rotating sweep line
-const sweepEntity = viewer.entities.add({
-  polyline: {
-    positions: new Cesium.CallbackProperty(function() {
-
-      const endPoint = Cesium.Cartesian3.fromDegrees(
-        50 + Math.cos(Cesium.Math.toRadians(sweepAngle)) * 10,
-        25 + Math.sin(Cesium.Math.toRadians(sweepAngle)) * 10,
-        0
-      );
-
-      return [radarCenter, endPoint];
-
-    }, false),
-    width: 2,
-    material: Cesium.Color.LIME
-  }
-});
-
-// Animate sweep
-viewer.clock.onTick.addEventListener(function() {
-  sweepAngle += 1;
-  if (sweepAngle > 360) sweepAngle = 0;
-});
-
-// =============================
-// ALTITUDE COLOR FUNCTION
-// =============================
-function getAltitudeColor(alt) {
-  if (alt < 3000) return Cesium.Color.YELLOW;
-  if (alt < 8000) return Cesium.Color.CYAN;
-  if (alt < 12000) return Cesium.Color.WHITE;
-  return Cesium.Color.LIME;
-}
-
-// =============================
-// SATELLITES
-// =============================
+// =====================
+// SATELLITES (Backend)
+// =====================
 socket.on("satellites", function(sats) {
 
   Object.values(satEntities).forEach(e =>
@@ -109,10 +51,8 @@ socket.on("satellites", function(sats) {
       },
       name: s.name,
       description: `
-        <div style="font-family: monospace">
-          <b>Object:</b> ${s.name}<br/>
-          <b>Altitude:</b> ${(s.altitude/1000).toFixed(2)} km
-        </div>
+        <b>Object:</b> ${s.name}<br/>
+        <b>Altitude:</b> ${(s.altitude/1000).toFixed(2)} km
       `
     });
 
@@ -120,9 +60,9 @@ socket.on("satellites", function(sats) {
   });
 });
 
-// =============================
-// FLIGHT FETCH (Browser)
-// =============================
+// =====================
+// FLIGHTS (Browser Fetch)
+// =====================
 async function fetchFlights() {
   try {
     const res = await fetch("https://opensky-network.org/api/states/all");
@@ -132,7 +72,6 @@ async function fetchFlights() {
     const flights = states.filter(s => {
       const lat = s[6];
       const lon = s[5];
-
       return lat && lon &&
         lat > 16 && lat < 33 &&
         lon > 35 && lon < 60;
@@ -141,13 +80,10 @@ async function fetchFlights() {
     updateFlights(flights);
 
   } catch (err) {
-    console.log("Flight fetch failed:", err);
+    console.log("Flight fetch failed (free API limitation)");
   }
 }
 
-// =============================
-// UPDATE FLIGHTS WITH TRAILS
-// =============================
 function updateFlights(flights) {
 
   flights.forEach(s => {
@@ -170,19 +106,15 @@ function updateFlights(flights) {
 
     flightTrails[callsign].push(position);
 
-    // Limit trail length
-    if (flightTrails[callsign].length > 30) {
+    if (flightTrails[callsign].length > 20) {
       flightTrails[callsign].shift();
     }
-
-    const color = getAltitudeColor(altitude);
 
     if (flightEntities[callsign]) {
 
       flightEntities[callsign].position = position;
       flightEntities[callsign].billboard.rotation =
         Cesium.Math.toRadians(heading);
-
       flightEntities[callsign].polyline.positions =
         flightTrails[callsign];
 
@@ -200,21 +132,19 @@ function updateFlights(flights) {
         polyline: {
           positions: flightTrails[callsign],
           width: 2,
-          material: color
+          material: Cesium.Color.CYAN
         },
         label: {
           text: callsign,
           font: "10px monospace",
-          fillColor: color,
+          fillColor: Cesium.Color.CYAN,
           pixelOffset: new Cesium.Cartesian2(0, -20)
         },
         name: callsign,
         description: `
-          <div style="font-family: monospace">
-            <b>Callsign:</b> ${callsign}<br/>
-            <b>Altitude:</b> ${(altitude/1000).toFixed(2)} km<br/>
-            <b>Heading:</b> ${heading}°
-          </div>
+          <b>Callsign:</b> ${callsign}<br/>
+          <b>Altitude:</b> ${(altitude/1000).toFixed(2)} km<br/>
+          <b>Heading:</b> ${heading}°
         `
       });
 
@@ -223,7 +153,5 @@ function updateFlights(flights) {
   });
 }
 
-// Refresh flights
-setInterval(fetchFlights, 8000);
+setInterval(fetchFlights, 15000);
 fetchFlights();
-
