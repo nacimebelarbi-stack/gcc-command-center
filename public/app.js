@@ -1,5 +1,5 @@
 // === CESIUM TOKEN ===
-Cesium.Ion.defaultAccessToken = "YOUR_TOKEN_HERE";
+Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0M2ZlMDNlMS05YmQ3LTQ2MWUtYTA2NC1iZWY5N2IwNTc4NDQiLCJpZCI6Mzk4NDk4LCJpYXQiOjE3NzI3MDAxMzB9.dqusYhifXL6vnbTMlGlOI1nP7ycmZzP4fVEw8Ixa_Dc";
 
 // === SOCKET CONNECTION ===
 const socket = io({
@@ -91,3 +91,4 @@ socket.on("flights", flights => {
     flightEntities[f.callsign] = entity;
   });
 });
+
