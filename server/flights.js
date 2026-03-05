@@ -14,7 +14,7 @@ async function getFlights() {
     const url = `https://opensky-network.org/api/states/all?lamin=${GCC.minLat}&lomin=${GCC.minLon}&lamax=${GCC.maxLat}&lomax=${GCC.maxLon}`;
 
     const res = await axios.get(url, {
-      timeout: 8000
+      timeout: 30000
     });
 
     if (!res.data || !res.data.states) return [];
@@ -66,3 +66,4 @@ async function getFlights() {
 }
 
 module.exports = { getFlights };
+
