@@ -1,3 +1,4 @@
+const { getFlights } = require("./flights");
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -26,13 +27,16 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log("Client connected");
 
-  setInterval(() => {
-    const sats = getSatellites();
-    console.log("Emitting satellites:", sats.length);
-    socket.emit("satellites", sats);
-  }, 5000);
-});
+  setInterval(async () => {
 
+    const sats = getSatellites();
+    socket.emit("satellites", sats);
+
+    const flights = await getFlights();
+    socket.emit("flights", flights);
+
+  }, 10000);
+});
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
