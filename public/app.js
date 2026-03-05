@@ -1,6 +1,7 @@
 
 Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0M2ZlMDNlMS05YmQ3LTQ2MWUtYTA2NC1iZWY5N2IwNTc4NDQiLCJpZCI6Mzk4NDk4LCJpYXQiOjE3NzI3MDAxMzB9.dqusYhifXL6vnbTMlGlOI1nP7ycmZzP4fVEw8Ixa_Dc";
 
+
 const socket = io({ transports: ["websocket"] });
 
 const viewer = new Cesium.Viewer("cesiumContainer", {
@@ -20,10 +21,10 @@ const satEntities = {};
 const flightEntities = {};
 const flightTrails = {};
 
-// =====================
+// ============================
 // SATELLITES (Backend)
-// =====================
-socket.on("satellites", function(sats) {
+// ============================
+socket.on("satellites", function (sats) {
 
   Object.values(satEntities).forEach(e =>
     viewer.entities.remove(e)
@@ -52,7 +53,9 @@ socket.on("satellites", function(sats) {
       name: s.name,
       description: `
         <b>Object:</b> ${s.name}<br/>
-        <b>Altitude:</b> ${(s.altitude/1000).toFixed(2)} km
+        <b>Latitude:</b> ${s.lat.toFixed(2)}°<br/>
+        <b>Longitude:</b> ${s.lon.toFixed(2)}°<br/>
+        <b>Altitude:</b> ${(s.altitude / 1000).toFixed(2)} km
       `
     });
 
@@ -60,18 +63,27 @@ socket.on("satellites", function(sats) {
   });
 });
 
-// =====================
-// FLIGHTS (Browser Fetch)
-// =====================
+// ============================
+// FLIGHTS (Browser - Free Mode)
+// ============================
 async function fetchFlights() {
   try {
+
     const res = await fetch("https://opensky-network.org/api/states/all");
+
+    // Handle rate limit
+    if (!res.ok) {
+      console.log("OpenSky rate limited:", res.status);
+      return;
+    }
+
     const data = await res.json();
     const states = data.states || [];
 
     const flights = states.filter(s => {
       const lat = s[6];
       const lon = s[5];
+
       return lat && lon &&
         lat > 16 && lat < 33 &&
         lon > 35 && lon < 60;
@@ -80,7 +92,7 @@ async function fetchFlights() {
     updateFlights(flights);
 
   } catch (err) {
-    console.log("Flight fetch failed (free API limitation)");
+    console.log("Flight fetch failed");
   }
 }
 
@@ -106,7 +118,8 @@ function updateFlights(flights) {
 
     flightTrails[callsign].push(position);
 
-    if (flightTrails[callsign].length > 20) {
+    // Limit trail length
+    if (flightTrails[callsign].length > 15) {
       flightTrails[callsign].shift();
     }
 
@@ -115,6 +128,7 @@ function updateFlights(flights) {
       flightEntities[callsign].position = position;
       flightEntities[callsign].billboard.rotation =
         Cesium.Math.toRadians(heading);
+
       flightEntities[callsign].polyline.positions =
         flightTrails[callsign];
 
@@ -143,7 +157,9 @@ function updateFlights(flights) {
         name: callsign,
         description: `
           <b>Callsign:</b> ${callsign}<br/>
-          <b>Altitude:</b> ${(altitude/1000).toFixed(2)} km<br/>
+          <b>Latitude:</b> ${lat.toFixed(2)}°<br/>
+          <b>Longitude:</b> ${lon.toFixed(2)}°<br/>
+          <b>Altitude:</b> ${(altitude / 1000).toFixed(2)} km<br/>
           <b>Heading:</b> ${heading}°
         `
       });
@@ -153,5 +169,6 @@ function updateFlights(flights) {
   });
 }
 
-setInterval(fetchFlights, 15000);
+// Poll every 60 seconds (avoid 429)
+setInterval(fetchFlights, 60000);
 fetchFlights();
