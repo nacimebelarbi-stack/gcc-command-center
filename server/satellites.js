@@ -73,10 +73,14 @@ function getSatellites() {
       const lat = satellite.degreesLat(geo.latitude);
       const lon = satellite.degreesLong(geo.longitude);
 
+      // GCC filter
       if (
         lat < GCC.minLat || lat > GCC.maxLat ||
         lon < GCC.minLon || lon > GCC.maxLon
       ) continue;
+
+      // REMOVE STARLINK ONLY
+      if (sat.name.includes("STARLINK")) continue;
 
       result.push({
         name: sat.name,
