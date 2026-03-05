@@ -1,4 +1,3 @@
-
 const axios = require("axios");
 
 const GCC = {
@@ -10,37 +9,59 @@ const GCC = {
 
 async function getFlights() {
   try {
-    const res = await axios.get(
-      "https://opensky-network.org/api/states/all"
-    );
 
-    const states = res.data.states || [];
+    // OpenSky bounding box query
+    const url = `https://opensky-network.org/api/states/all?lamin=${GCC.minLat}&lomin=${GCC.minLon}&lamax=${GCC.maxLat}&lomax=${GCC.maxLon}`;
 
-    const flights = states
-      .filter(s => {
-        const lat = s[6];
-        const lon = s[5];
+    const res = await axios.get(url, {
+      timeout: 8000
+    });
 
-        return lat && lon &&
-          lat > GCC.minLat && lat < GCC.maxLat &&
-          lon > GCC.minLon && lon < GCC.maxLon;
-      })
-      .map(s => ({
-        callsign: s[1]?.trim() || "FLIGHT",
-        icao: s[0],
-        lat: s[6],
-        lon: s[5],
-        altitude: s[7] || 10000,
-        heading: s[10] || 0
-      }));
+    if (!res.data || !res.data.states) return [];
 
-    console.log("Flights over GCC:", flights.length);
+    const flights = res.data.states;
 
-    return flights;
+    const result = [];
+
+    for (const f of flights) {
+
+      const [
+        icao,
+        callsign,
+        originCountry,
+        timePosition,
+        lastContact,
+        lon,
+        lat,
+        baroAlt,
+        onGround,
+        velocity,
+        heading,
+        verticalRate,
+        geoAlt
+      ] = f;
+
+      if (!lat || !lon) continue;
+      if (onGround) continue;
+
+      result.push({
+        icao,
+        callsign: (callsign || "").trim() || icao,
+        lat,
+        lon,
+        altitude: (geoAlt || baroAlt || 0), // already meters
+        heading: heading || 0,
+        velocity: velocity || 0
+      });
+    }
+
+    console.log("Flights over GCC:", result.length);
+
+    return result;
 
   } catch (err) {
-    console.error("OpenSky error:", err.message);
-    return [];
+    console.error("Flight API error:", err.message);
+    return []; // 🚨 NEVER throw
   }
 }
 
