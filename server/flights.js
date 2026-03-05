@@ -1,4 +1,4 @@
-
+console.log("flights.js loaded");
 const axios = require("axios");
 
 const GCC = {
@@ -45,3 +45,4 @@ async function getFlights() {
 }
 
 module.exports = { getFlights };
+
