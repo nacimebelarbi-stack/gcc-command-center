@@ -5,7 +5,7 @@ const cors = require("cors");
 const { Server } = require("socket.io");
 
 const { getSatellites } = require("./satellites");
-const { getFlights } = require("./flights");
+
 
 const app = express();
 app.use(cors());
@@ -48,3 +48,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 GCC Command Center running on port ${PORT}`);
 });
+
