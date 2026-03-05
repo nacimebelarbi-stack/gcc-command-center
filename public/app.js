@@ -107,6 +107,12 @@ socket.on("satellites", function(sats) {
 async function fetchFlights() {
   try {
     const res = await fetch("https://opensky-network.org/api/states/all");
+
+    if (!res.ok) {
+      console.log("OpenSky blocked:", res.status);
+      return;
+    }
+
     const data = await res.json();
     const states = data.states || [];
 
@@ -187,5 +193,6 @@ function updateFlights(flights) {
   });
 }
 
-setInterval(fetchFlights, 10000);
+setInterval(fetchFlights, 60000);
 fetchFlights();
+
