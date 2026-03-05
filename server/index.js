@@ -28,6 +28,7 @@ io.on("connection", (socket) => {
   console.log("Client connected");
 
   setInterval(async () => {
+    console.log("Interval running...");
   try {
 
     const sats = getSatellites();
@@ -47,6 +48,7 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 GCC Command Center running on port ${PORT}`);
 });
+
 
 
 
