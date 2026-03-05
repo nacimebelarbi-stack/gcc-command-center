@@ -1,6 +1,8 @@
 const axios = require("axios");
 
-// GCC bounding box
+const API_KEY = process.env.AVIATIONSTACK_KEY;
+const BASE_URL = "http://api.aviationstack.com/v1/flights";
+
 const GCC = {
   minLat: 16,
   maxLat: 33,
@@ -8,48 +10,75 @@ const GCC = {
   maxLon: 60
 };
 
-async function getFlights() {
+function randomBetween(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+let aircraft = [];
+
+async function initializeFlights() {
   try {
 
-    const url = "https://public-api.adsbexchange.com/VirtualRadar/AircraftList.json";
-
-    const response = await axios.get(url, {
-      params: {
-        latMin: GCC.minLat,
-        latMax: GCC.maxLat,
-        lonMin: GCC.minLon,
-        lonMax: GCC.maxLon
-      },
-      timeout: 10000
-    });
-
-    if (!response.data || !Array.isArray(response.data.acList)) {
-      console.log("ADSBx: No aircraft list returned");
-      return [];
+    if (!API_KEY) {
+      console.error("AVIATIONSTACK_KEY missing");
+      return;
     }
 
-    const flights = response.data.acList
-      .filter(ac =>
-        typeof ac.Lat === "number" &&
-        typeof ac.Long === "number"
-      )
-      .map(ac => ({
-        callsign: ac.Callsign?.trim() || ac.Reg || ac.Icao || "UNKNOWN",
-        icao: ac.Icao || "",
-        lat: ac.Lat,
-        lon: ac.Long,
-        altitude: ac.Alt ? ac.Alt * 0.3048 : 0, // feet → meters
-        heading: ac.Track || 0
-      }));
+    const res = await axios.get(BASE_URL, {
+      params: {
+        access_key: API_KEY,
+        limit: 20
+      },
+      timeout: 15000
+    });
 
-    console.log("ADSBx flights:", flights.length);
+    if (!res.data || !Array.isArray(res.data.data)) {
+      console.log("No AviationStack data");
+      return;
+    }
 
-    return flights;
+    aircraft = res.data.data.map((f, i) => ({
+      icao: f.flight?.icao || "SIM" + i,
+      callsign: f.flight?.iata || f.flight?.icao || "FLIGHT" + i,
+      airline: f.airline?.name || "Unknown Airline",
+      route: `${f.departure?.iata || "XXX"} → ${f.arrival?.iata || "YYY"}`,
+      lat: randomBetween(GCC.minLat, GCC.maxLat),
+      lon: randomBetween(GCC.minLon, GCC.maxLon),
+      altitude: randomBetween(9000, 12000),
+      heading: randomBetween(0, 360),
+      speed: randomBetween(0.05, 0.12)
+    }));
 
-  } catch (error) {
-    console.error("ADSBx fetch error:", error.message);
-    return [];
+    console.log("Initialized aircraft:", aircraft.length);
+
+  } catch (err) {
+    console.error("Initialization error:", err.message);
   }
+}
+
+function moveAircraft() {
+  aircraft = aircraft.map(f => {
+    const rad = (f.heading * Math.PI) / 180;
+
+    return {
+      ...f,
+      lat: f.lat + Math.cos(rad) * f.speed,
+      lon: f.lon + Math.sin(rad) * f.speed
+    };
+  });
+}
+
+async function getFlights() {
+
+  if (aircraft.length === 0) {
+    await initializeFlights();
+  }
+
+  moveAircraft();
+
+  console.log("Flights over GCC:", aircraft.length);
+
+  return aircraft;
 }
 
 module.exports = { getFlights };
