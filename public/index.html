@@ -1,15 +1,36 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>GCC Aerospace Command Center</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Cesium.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
-</head>
-<body>
-<div id="hud">GCC AEROSPACE COMMAND CENTER</div>
-<div id="cesiumContainer"></div>
-<script src="/socket.io/socket.io.js"></script>
-<script src="app.js"></script>
-</body>
-</html>
+const express = require("express");
+const http = require("http");
+const cors = require("cors");
+const { Server } = require("socket.io");
+
+const { getSatellites } = require("./satellites");
+
+const app = express();
+app.use(cors());
+app.use(express.static("public"));
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: { origin: "*" },
+  transports: ["websocket"]
+});
+
+io.on("connection", (socket) => {
+
+  console.log("Client connected");
+
+  // Satellites every 5 seconds
+  setInterval(() => {
+    const sats = getSatellites();
+    console.log("Emitting satellites:", sats.length);
+    socket.emit("satellites", sats);
+  }, 5000);
+
+});
+
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+  console.log(`🚀 GCC Command Center running on port ${PORT}`);
+});
