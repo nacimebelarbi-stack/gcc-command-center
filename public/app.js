@@ -1,22 +1,39 @@
+// === CESIUM TOKEN ===
 Cesium.Ion.defaultAccessToken = "YOUR_TOKEN_HERE";
 
-const socket = io({ transports: ["websocket"] });
+// === SOCKET CONNECTION ===
+const socket = io({
+  transports: ["websocket"]
+});
 
+// === CREATE VIEWER (FORCE TERRAIN + IMAGERY) ===
 const viewer = new Cesium.Viewer("cesiumContainer", {
-  timeline:false,
-  animation:false,
-  baseLayerPicker:false
+  terrainProvider: Cesium.createWorldTerrain(),
+  imageryProvider: new Cesium.IonImageryProvider({ assetId: 2 }),
+  timeline: false,
+  animation: false,
+  baseLayerPicker: false
 });
 
-viewer.camera.flyTo({
-  destination: Cesium.Cartesian3.fromDegrees(50, 25, 20000000)
+// === FORCE CAMERA TO GCC ===
+viewer.camera.setView({
+  destination: Cesium.Cartesian3.fromDegrees(
+    50,   // Longitude (GCC center)
+    25,   // Latitude
+    20000000 // Height
+  )
 });
 
+// === ENTITY STORAGE ===
 const satEntities = {};
 const flightEntities = {};
 
+// =============================
+// SATELLITES
+// =============================
 socket.on("satellites", sats => {
 
+  // Clear previous satellites
   Object.values(satEntities).forEach(e => viewer.entities.remove(e));
   Object.keys(satEntities).forEach(k => delete satEntities[k]);
 
@@ -24,20 +41,18 @@ socket.on("satellites", sats => {
 
     const entity = viewer.entities.add({
       position: Cesium.Cartesian3.fromDegrees(
-        s.lon, s.lat, s.altitude
+        s.lon,
+        s.lat,
+        s.altitude
       ),
-      point: { pixelSize:6, color:Cesium.Color.RED },
+      point: {
+        pixelSize: 6,
+        color: Cesium.Color.RED
+      },
       label: {
         text: s.name,
         font: "10px monospace",
         fillColor: Cesium.Color.YELLOW
-      },
-      polyline: {
-        positions: s.orbit.map(p =>
-          Cesium.Cartesian3.fromDegrees(p[0], p[1], p[2])
-        ),
-        width:1,
-        material: Cesium.Color.ORANGE
       }
     });
 
@@ -45,8 +60,12 @@ socket.on("satellites", sats => {
   });
 });
 
+// =============================
+// FLIGHTS
+// =============================
 socket.on("flights", flights => {
 
+  // Clear previous flights
   Object.values(flightEntities).forEach(e => viewer.entities.remove(e));
   Object.keys(flightEntities).forEach(k => delete flightEntities[k]);
 
@@ -54,9 +73,14 @@ socket.on("flights", flights => {
 
     const entity = viewer.entities.add({
       position: Cesium.Cartesian3.fromDegrees(
-        f.lon, f.lat, f.altitude
+        f.lon,
+        f.lat,
+        f.altitude || 10000
       ),
-      point: { pixelSize:5, color:Cesium.Color.CYAN },
+      point: {
+        pixelSize: 5,
+        color: Cesium.Color.CYAN
+      },
       label: {
         text: f.callsign || "FLIGHT",
         font: "10px monospace",
