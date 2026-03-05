@@ -1,4 +1,4 @@
-const { getFlights } = require("./flights");
+
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -42,3 +42,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 GCC Command Center running on port ${PORT}`);
 });
+
