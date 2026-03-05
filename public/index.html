@@ -1,3 +1,4 @@
+const path = require("path");
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -6,7 +7,9 @@ const { getSatellites } = require("./satellites");
 
 const app = express();
 app.use(cors());
-app.use(express.static("public"));
+
+const publicPath = path.join(process.cwd(), "public");
+app.use(express.static(publicPath));
 
 const server = http.createServer(app);
 
