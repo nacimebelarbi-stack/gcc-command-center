@@ -1,4 +1,4 @@
-console.log("flights.js loaded");
+
 const axios = require("axios");
 
 const GCC = {
@@ -38,12 +38,10 @@ async function getFlights() {
 
     return flights;
 
-    } catch (err) {
-    console.error("OpenSky FULL ERROR:");
-    console.error(err);
+  } catch (err) {
+    console.error("OpenSky error:", err.message);
     return [];
   }
+}
+
 module.exports = { getFlights };
-
-
-
