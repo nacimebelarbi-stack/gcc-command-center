@@ -1,55 +1,36 @@
-// ==============================
-// CESIUM TOKEN
-// ==============================
+
 Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0M2ZlMDNlMS05YmQ3LTQ2MWUtYTA2NC1iZWY5N2IwNTc4NDQiLCJpZCI6Mzk4NDk4LCJpYXQiOjE3NzI3MDAxMzB9.dqusYhifXL6vnbTMlGlOI1nP7ycmZzP4fVEw8Ixa_Dc";
 
-// ==============================
-// SOCKET CONNECTION
-// ==============================
 const socket = io({
   transports: ["websocket"]
 });
 
-// ==============================
-// CREATE CESIUM VIEWER (DEFAULT SAFE MODE)
-// ==============================
 const viewer = new Cesium.Viewer("cesiumContainer", {
   timeline: false,
   animation: false,
   baseLayerPicker: false
 });
 
-// ==============================
-// FORCE CAMERA TO GCC REGION
-// ==============================
+// Center camera on GCC
 viewer.camera.setView({
-  destination: Cesium.Cartesian3.fromDegrees(
-    50,   // Longitude
-    25,   // Latitude
-    20000000 // Height
-  )
+  destination: Cesium.Cartesian3.fromDegrees(50, 25, 20000000)
 });
 
-// ==============================
-// ENTITY STORAGE
-// ==============================
 const satEntities = {};
 const flightEntities = {};
 
-// ==============================
-// SATELLITES
-// ==============================
-socket.on("satellites", sats => {
+// Satellites
+socket.on("satellites", function(sats) {
 
-  // Remove old satellites
-  Object.values(satEntities).forEach(entity =>
-    viewer.entities.remove(entity)
-  );
-  Object.keys(satEntities).forEach(key =>
-    delete satEntities[key]
-  );
+  Object.values(satEntities).forEach(function(entity) {
+    viewer.entities.remove(entity);
+  });
 
-  sats.forEach(s => {
+  Object.keys(satEntities).forEach(function(key) {
+    delete satEntities[key];
+  });
+
+  sats.forEach(function(s) {
 
     const entity = viewer.entities.add({
       position: Cesium.Cartesian3.fromDegrees(
@@ -72,20 +53,18 @@ socket.on("satellites", sats => {
   });
 });
 
-// ==============================
-// FLIGHTS
-// ==============================
-socket.on("flights", flights => {
+// Flights
+socket.on("flights", function(flights) {
 
-  // Remove old flights
-  Object.values(flightEntities).forEach(entity =>
-    viewer.entities.remove(entity)
-  );
-  Object.keys(flightEntities).forEach(key =>
-    delete flightEntities[key]
-  );
+  Object.values(flightEntities).forEach(function(entity) {
+    viewer.entities.remove(entity);
+  });
 
-  flights.forEach(f => {
+  Object.keys(flightEntities).forEach(function(key) {
+    delete flightEntities[key];
+  });
+
+  flights.forEach(function(f) {
 
     const entity = viewer.entities.add({
       position: Cesium.Cartesian3.fromDegrees(
@@ -107,6 +86,4 @@ socket.on("flights", flights => {
     flightEntities[f.callsign || Math.random()] = entity;
   });
 });
-});
-
 
