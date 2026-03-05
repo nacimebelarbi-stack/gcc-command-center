@@ -1,69 +1,38 @@
-// app.js
-const path = require("path");
-const express = require("express");
-const http = require("http");
-const cors = require("cors");
-const { Server } = require("socket.io");
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>GCC Aerospace Command Center</title>
 
-// Keep your satellite feed
-const { getSatellites } = require("./satellites");
+  <link rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Widgets/widgets.css" />
 
-// ⬇️ OpenSky client (handles 429 + cadence internally)
-const { createOpenSkyClient } = require("./openskyClient");
+  <script src="https://cdn.jsdelivr.net/npm/cesium@latest/Build/Cesium/Cesium.js"></script>
 
-// ─────────────────────────────────────────────────────────────
-// Server setup
-// ─────────────────────────────────────────────────────────────
-const app = express();
-app.use(cors());
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #cesiumContainer { width: 100vw; height: 100vh; }
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 10px;
+      color: #00ffcc;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid #00ffcc;
+      font-family: monospace;
+      z-index: 10;
+    }
+  </style>
+</head>
 
-// Your screenshot shows index.html & style.css in the same folder as this file,
-// so expose THIS directory as / (static).
-const publicPath = __dirname;
-app.use(express.static(publicPath));
+<body>
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(publicPath, "index.html"));
-});
+  <div id="hud">GCC AEROSPACE COMMAND CENTER</div>
+  <div id="cesiumContainer"></div>
 
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*" },
-  transports: ["websocket"]
-});
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
 
-// ─────────────────────────────────────────────────────────────
-// OpenSky configuration
-// ─────────────────────────────────────────────────────────────
-// Auth modes:
-//  - Anonymous:    authenticated=false, dailyBudget=400 (≈10s cadence)  [OpenSky docs] 
-//  - Authenticated:authenticated=true,  dailyBudget=4000 (≈5s cadence)
-//      * legacy basic auth (older accounts) -> use OPEN_SKY_USER / OPEN_SKY_PASS
-//      * OAuth2 bearer token (newer accounts) -> use OPEN_SKY_ACCESS_TOKEN
-//
-// NOTE: OpenSky publishes ~10s resolution for anonymous and ~5s for authenticated queries.
-// We will choose poll intervals >= these values. [1](https://github.com/openskynetwork/opensky-api/blob/master/docs/free/rest.rst)
-
-const AUTH_MODE = (process.env.OPEN_SKY_AUTH_MODE || "anon").toLowerCase();
-const DEFAULT_AIRPORT = process.env.DEFAULT_AIRPORT || "OMAA";
-const DEFAULT_HOURS = Number(process.env.DEFAULT_HOURS || 2);
-
-// Build the OpenSky client
-let client;
-if (AUTH_MODE === "legacy") {
-  client = createOpenSkyClient({
-    authenticated: true,
-    dailyBudget: 4000,
-    auth: { username: process.env.OPEN_SKY_USER, password: process.env.OPEN_SKY_PASS }
-  });
-} else if (AUTH_MODE === "oauth") {
-  client = createOpenSkyClient({
-    authenticated: true,
-    dailyBudget: 4000,
-    accessToken: process.env.OPEN_SKY_ACCESS_TOKEN
-  });
-} else {
-  client = createOpenSkyClient({
-    authenticated: false,
-    dailyBudget: 400
-  });
+</body>
+</html>
