@@ -34,6 +34,7 @@ io.on("connection", (socket) => {
     io.emit("satellites", sats);
 
     const flights = await getFlights();
+     console.log("Flights emitted:", flights.length);
     io.emit("flights", flights);
 
   } catch (err) {
@@ -46,5 +47,6 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚀 GCC Command Center running on port ${PORT}`);
 });
+
 
 
