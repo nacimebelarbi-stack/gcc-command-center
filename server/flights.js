@@ -38,11 +38,15 @@ async function getFlights() {
 
     return flights;
 
-  } catch (err) {
-    console.error("OpenSky error:", err.message);
+    } catch (err) {
+    console.error(
+      "OpenSky FULL ERROR:",
+      err.response?.status,
+      err.response?.statusText,
+      err.message
+    );
     return [];
   }
-}
-
 module.exports = { getFlights };
+
 
