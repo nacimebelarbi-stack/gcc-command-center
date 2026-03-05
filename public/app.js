@@ -24,18 +24,48 @@ const flightTrails = {};
 // =============================
 // RADAR SWEEP EFFECT
 // =============================
+// =============================
+// RADAR SWEEP (SAFE VERSION)
+// =============================
+
 const radarCenter = Cesium.Cartesian3.fromDegrees(50, 25);
 
-const radar = viewer.entities.add({
+let sweepAngle = 0;
+
+viewer.entities.add({
   position: radarCenter,
   ellipse: {
     semiMinorAxis: 1500000.0,
     semiMajorAxis: 1500000.0,
-    material: new Cesium.ImageMaterialProperty({
-      image: "https://i.imgur.com/3ZQ3ZQk.png", // simple radar ring image
-      transparent: true
-    })
+    material: new Cesium.ColorMaterialProperty(
+      Cesium.Color.LIME.withAlpha(0.05)
+    )
   }
+});
+
+// Rotating sweep line
+const sweepEntity = viewer.entities.add({
+  polyline: {
+    positions: new Cesium.CallbackProperty(function() {
+
+      const endPoint = Cesium.Cartesian3.fromDegrees(
+        50 + Math.cos(Cesium.Math.toRadians(sweepAngle)) * 10,
+        25 + Math.sin(Cesium.Math.toRadians(sweepAngle)) * 10,
+        0
+      );
+
+      return [radarCenter, endPoint];
+
+    }, false),
+    width: 2,
+    material: Cesium.Color.LIME
+  }
+});
+
+// Animate sweep
+viewer.clock.onTick.addEventListener(function() {
+  sweepAngle += 1;
+  if (sweepAngle > 360) sweepAngle = 0;
 });
 
 // =============================
@@ -196,3 +226,4 @@ function updateFlights(flights) {
 // Refresh flights
 setInterval(fetchFlights, 8000);
 fetchFlights();
+
