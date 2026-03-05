@@ -8,7 +8,9 @@ const socket = io({
 const viewer = new Cesium.Viewer("cesiumContainer", {
   timeline: false,
   animation: false,
-  baseLayerPicker: false
+  baseLayerPicker: false,
+  infoBox: true,
+  selectionIndicator: true
 });
 
 // Focus on GCC
@@ -127,4 +129,5 @@ async function fetchFlights() {
 // Update every 10 seconds
 setInterval(fetchFlights, 10000);
 fetchFlights();
+
 
