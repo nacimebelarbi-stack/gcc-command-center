@@ -1,11 +1,15 @@
 const axios = require("axios");
 const satellite = require("satellite.js");
 
+const GCC = {
+  minLat: 16,
+  maxLat: 33,
+  minLon: 35,
+  maxLon: 60
+};
+
 let tleData = [];
 
-/*
-  LOAD TLE SAFELY
-*/
 async function loadTLE() {
   try {
     const res = await axios.get(
@@ -28,35 +32,28 @@ async function loadTLE() {
       if (!line1.startsWith("1 ")) continue;
       if (!line2.startsWith("2 ")) continue;
 
-      tleData.push({
-        name,
-        line1,
-        line2
-      });
+      // REMOVE STARLINK
+      if (name.includes("STARLINK")) continue;
+
+      // KEEP ONLY DEBRIS & ROCKET BODIES
+      if (!name.includes("DEB") && !name.includes("R/B")) continue;
+
+      tleData.push({ name, line1, line2 });
     }
 
-    console.log("Loaded TLE count:", tleData.length);
+    console.log("Filtered TLE count:", tleData.length);
 
   } catch (err) {
     console.error("TLE load failed:", err.message);
   }
 }
 
-// Load immediately
 loadTLE();
-
-// Refresh every 3 hours
 setInterval(loadTLE, 3 * 60 * 60 * 1000);
 
-/*
-  SAFE SATELLITE PROPAGATION
-*/
 function getSatellites() {
 
-  if (!tleData || tleData.length === 0) {
-    console.log("TLE not loaded yet");
-    return [];
-  }
+  if (!tleData.length) return [];
 
   const now = new Date();
   const gmst = satellite.gstime(now);
@@ -65,40 +62,54 @@ function getSatellites() {
 
   for (const sat of tleData) {
 
-    if (!sat.line1 || !sat.line2) continue;
-
     try {
-
-      const satrec = satellite.twoline2satrec(
-        sat.line1,
-        sat.line2
-      );
-
+      const satrec = satellite.twoline2satrec(sat.line1, sat.line2);
       const posVel = satellite.propagate(satrec, now);
+      if (!posVel.position) continue;
 
-      if (!posVel || !posVel.position) continue;
-
-      const geo = satellite.eciToGeodetic(
-        posVel.position,
-        gmst
-      );
+      const geo = satellite.eciToGeodetic(posVel.position, gmst);
 
       const lat = satellite.degreesLat(geo.latitude);
       const lon = satellite.degreesLong(geo.longitude);
+
+      // GCC FILTER
+      if (
+        lat < GCC.minLat || lat > GCC.maxLat ||
+        lon < GCC.minLon || lon > GCC.maxLon
+      ) continue;
+
+      // ORBIT TRAIL (sample next 45 minutes)
+      const orbit = [];
+      for (let t = 0; t <= 45; t += 5) {
+        const future = new Date(now.getTime() + t * 60000);
+        const gmstFuture = satellite.gstime(future);
+        const futurePos = satellite.propagate(satrec, future);
+        if (!futurePos.position) continue;
+
+        const futureGeo = satellite.eciToGeodetic(
+          futurePos.position,
+          gmstFuture
+        );
+
+        orbit.push([
+          satellite.degreesLong(futureGeo.longitude),
+          satellite.degreesLat(futureGeo.latitude),
+          futureGeo.height * 1000
+        ]);
+      }
 
       result.push({
         name: sat.name,
         lat,
         lon,
-        altitude: geo.height * 1000
+        altitude: geo.height * 1000,
+        orbit
       });
 
-    } catch (err) {
-      continue; // skip any bad satellite safely
+    } catch {
+      continue;
     }
   }
-
-  console.log("Total satellites returned:", result.length);
 
   return result;
 }
