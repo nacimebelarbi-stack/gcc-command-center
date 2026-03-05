@@ -18,8 +18,8 @@ async function fetchLiveFlights() {
     const res = await axios.get(BASE_URL, {
       params: {
         access_key: API_KEY,
-        flight_status: "active",   // Only active flights
-        limit: 100                 // Increase if your plan allows
+        flight_status: "active",
+        limit: 100
       },
       timeout: 15000
     });
@@ -30,7 +30,7 @@ async function fetchLiveFlights() {
     }
 
     const liveFlights = res.data.data
-      .filter(f => 
+      .filter(f =>
         f.live &&
         typeof f.live.latitude === "number" &&
         typeof f.live.longitude === "number"
@@ -40,11 +40,14 @@ async function fetchLiveFlights() {
         callsign: f.flight?.iata || f.flight?.icao || "UNKNOWN",
         airline: f.airline?.name || "Unknown Airline",
         route: `${f.departure?.iata || "XXX"} → ${f.arrival?.iata || "YYY"}`,
-        latitude: f.live.latitude,
-        longitude: f.live.longitude,
+        
+        // ✅ IMPORTANT: use lat / lon (not latitude / longitude)
+        lat: f.live.latitude,
+        lon: f.live.longitude,
+
         altitude: f.live.altitude || 0,
         heading: f.live.direction || 0,
-        speed_kmh: f.live.speed_horizontal || 0,
+        speed: f.live.speed_horizontal || 0,
         vertical_speed: f.live.speed_vertical || 0,
         last_updated: f.live.updated || null
       }));
@@ -64,6 +67,7 @@ async function fetchLiveFlights() {
  */
 async function getFlights() {
   aircraft = await fetchLiveFlights();
+  console.log("Flights emitted:", aircraft.length);
   return aircraft;
 }
 
