@@ -3,81 +3,67 @@ const axios = require("axios");
 const API_KEY = process.env.AVIATIONSTACK_KEY;
 const BASE_URL = "http://api.aviationstack.com/v1/flights";
 
-const GCC = {
-  minLat: 16,
-  maxLat: 33,
-  minLon: 35,
-  maxLon: 60
-};
-
-function randomBetween(min, max) {
-  return Math.random() * (max - min) + min;
-}
-
 let aircraft = [];
 
-async function initializeFlights() {
+/**
+ * Fetch real live aircraft positions from AviationStack
+ */
+async function fetchLiveFlights() {
   try {
-
     if (!API_KEY) {
-      console.error("AVIATIONSTACK_KEY missing");
-      return;
+      console.error("❌ AVIATIONSTACK_KEY missing");
+      return [];
     }
 
     const res = await axios.get(BASE_URL, {
       params: {
         access_key: API_KEY,
-        limit: 20
+        flight_status: "active",   // Only active flights
+        limit: 100                 // Increase if your plan allows
       },
       timeout: 15000
     });
 
     if (!res.data || !Array.isArray(res.data.data)) {
-      console.log("No AviationStack data");
-      return;
+      console.log("⚠️ No valid AviationStack data");
+      return [];
     }
 
-    aircraft = res.data.data.map((f, i) => ({
-      icao: f.flight?.icao || "SIM" + i,
-      callsign: f.flight?.iata || f.flight?.icao || "FLIGHT" + i,
-      airline: f.airline?.name || "Unknown Airline",
-      route: `${f.departure?.iata || "XXX"} → ${f.arrival?.iata || "YYY"}`,
-      lat: randomBetween(GCC.minLat, GCC.maxLat),
-      lon: randomBetween(GCC.minLon, GCC.maxLon),
-      altitude: randomBetween(9000, 12000),
-      heading: randomBetween(0, 360),
-      speed: randomBetween(0.05, 0.12)
-    }));
+    const liveFlights = res.data.data
+      .filter(f => 
+        f.live &&
+        typeof f.live.latitude === "number" &&
+        typeof f.live.longitude === "number"
+      )
+      .map(f => ({
+        icao: f.flight?.icao || null,
+        callsign: f.flight?.iata || f.flight?.icao || "UNKNOWN",
+        airline: f.airline?.name || "Unknown Airline",
+        route: `${f.departure?.iata || "XXX"} → ${f.arrival?.iata || "YYY"}`,
+        latitude: f.live.latitude,
+        longitude: f.live.longitude,
+        altitude: f.live.altitude || 0,
+        heading: f.live.direction || 0,
+        speed_kmh: f.live.speed_horizontal || 0,
+        vertical_speed: f.live.speed_vertical || 0,
+        last_updated: f.live.updated || null
+      }));
 
-    console.log("Initialized aircraft:", aircraft.length);
+    console.log(`✈️ Live aircraft received: ${liveFlights.length}`);
+
+    return liveFlights;
 
   } catch (err) {
-    console.error("Initialization error:", err.message);
+    console.error("❌ AviationStack fetch error:", err.message);
+    return [];
   }
 }
 
-function moveAircraft() {
-  aircraft = aircraft.map(f => {
-    const rad = (f.heading * Math.PI) / 180;
-
-    return {
-      ...f,
-      lat: f.lat + Math.cos(rad) * f.speed,
-      lon: f.lon + Math.sin(rad) * f.speed
-    };
-  });
-}
-
+/**
+ * Public function used by your app
+ */
 async function getFlights() {
-
-  if (aircraft.length === 0) {
-    await initializeFlights();
-  }
-
-  moveAircraft();
-
-  console.log("Flights over GCC:", aircraft.length);
-
+  aircraft = await fetchLiveFlights();
   return aircraft;
 }
 
