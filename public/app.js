@@ -7,9 +7,10 @@ const socket = io();
 const viewer = new Cesium.Viewer("cesiumContainer", {
   timeline: false,
   animation: false,
-  baseLayerPicker: false
+  baseLayerPicker: false,
+  infoBox: true,
+  selectionIndicator: true
 });
-
 viewer.camera.setView({
   destination: Cesium.Cartesian3.fromDegrees(50, 25, 20000000)
 });
@@ -117,3 +118,4 @@ async function fetchFlights() {
 
 setInterval(fetchFlights, 60000);
 fetchFlights();
+
