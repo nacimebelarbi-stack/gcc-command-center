@@ -7,27 +7,31 @@ const GCC = {
   maxLon: 60
 };
 
-// ADS-B Exchange API (public read endpoint)
 async function getFlights() {
   try {
+
     const res = await axios.get(
-      "https://api.adsbexchange.com/v2/lat/16/lon/35/dist/1500/"
+      "https://opensky-network.org/api/states/all",
+      { timeout: 5000 }
     );
 
-    const aircraft = res.data.ac || [];
+    const states = res.data.states || [];
 
-    const flights = aircraft
-      .filter(a =>
-        a.lat && a.lon &&
-        a.lat > GCC.minLat && a.lat < GCC.maxLat &&
-        a.lon > GCC.minLon && a.lon < GCC.maxLon
-      )
-      .map(a => ({
-        callsign: a.flight || "FLIGHT",
-        lat: a.lat,
-        lon: a.lon,
-        altitude: (a.alt_baro || 30000) * 0.3048,
-        heading: a.track || 0
+    const flights = states
+      .filter(s => {
+        const lat = s[6];
+        const lon = s[5];
+
+        return lat && lon &&
+          lat > GCC.minLat && lat < GCC.maxLat &&
+          lon > GCC.minLon && lon < GCC.maxLon;
+      })
+      .map(s => ({
+        callsign: s[1]?.trim() || "FLIGHT",
+        lat: s[6],
+        lon: s[5],
+        altitude: s[7] || 10000,
+        heading: s[10] || 0
       }));
 
     console.log("Flights over GCC:", flights.length);
@@ -35,7 +39,7 @@ async function getFlights() {
     return flights;
 
   } catch (err) {
-    console.error("ADS-B fetch failed:", err.message);
+    console.log("Flights API blocked");
     return [];
   }
 }
